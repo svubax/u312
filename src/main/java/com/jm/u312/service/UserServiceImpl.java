@@ -1,24 +1,35 @@
 package com.jm.u312.service;
 
-import com.jm.u312.repository.UserRepository;
 import com.jm.u312.model.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import com.jm.u312.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
-    public UserServiceImpl(UserRepository userRepository) {
+    private final RoleService roleService;
+    private final PasswordEncoder passwordEncoder;
+    public UserServiceImpl(UserRepository userRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.roleService = roleService;
+        this.passwordEncoder = passwordEncoder;
     }
     @Override
     public List<User> getUsers(){
         return userRepository.findAll();
     }
     @Override
-    public void addUser(User user){
+    public void addUser(User user, String... roles){
+        if (roles != null)
+            user.setRoles(Arrays.stream(roles)
+                    .map(roleService::getRoleByName)
+                    .collect(Collectors.toSet()));
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
     }
     @Override
@@ -26,7 +37,11 @@ public class UserServiceImpl implements UserService {
         userRepository.deleteById(id);
     }
     @Override
-    public void updateUser(User user) {
+    public void updateUser(User user, String... roles) {
+        if (roles != null)
+            user.setRoles(Arrays.stream(roles)
+                    .map(roleService::getRoleByName)
+                    .collect(Collectors.toSet()));
         userRepository.save(user);
     }
     @Override
@@ -35,10 +50,6 @@ public class UserServiceImpl implements UserService {
     }
     @Override
     public User getUser(String email) {
-        return userRepository.findUserByEmail(email);
-    }
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return userRepository.findUserByEmail(email);
     }
 }
